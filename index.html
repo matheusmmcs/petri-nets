@@ -1,59 +1,102 @@
+<!DOCTYPE html>
 <html>
-  <head>
-    <title>Petri Nets</title>
-    <script type="text/javascript" src="raphael-min.js"></script>
-    <script type="text/javascript" src="petrivis.js"></script>
-    <style type="text/css">
-      #canvas_container {
-        width: 400px;
-        height: 400px;
-        -webkit-touch-callout: none;
-        -webkit-user-select: none;
-      }
-      #json_container {
-        
-      }
-    </style>
-  </head>
-  <body>
-    <h1>Interactive Petri Net Sim</h1>
-    <p>
-    Click on the transitions to activate them.
-    </p>
-    <div id="canvas_container"></div>
-    <p>
-      Edit the JSON network description in the text box below and click
-      <em>evaluate</em> to modify the petri net.
-    </p>
-    <span>
-      <div id="json_container">
-	<textarea id="network_text" rows="20" cols="60">
-{
-    "places" :
-    { "p1" : { "x" : 100, "y" : 100 },
-      "p2" : { "x" : 200, "y" : 100 },
-      "p3" : { "x" : 200, "y" : 200 },
-      "p4" : { "x" : 200, "y" : 300 },
-      "p5" : { "x" : 300, "y" : 300 }},
-    "transitions" :
-    { "source1" : { "x" : 50, "y" : 100, "orientation" : 2},
-      "source2" : { "x" : 250, "y" : 100, "orientation" : 2 },
-      "t1" : { "x" : 150, "y" : 150, "orientation" : 1},
-      "t2" : { "x" : 250, "y" : 250, "orientation" : 1},
-      "sink" : {"x" : 250, "y" : 350, "orientation" : 1}},
-    "place_transition" : [ ["p1", "t1"], ["p2", "t1"], ["p3", "t2"],
-			   ["p4", "sink"], ["p5", "sink"]],
-    "transition_place" : [ ["source1", "p1"], ["source2", "p2"], 
-			   ["t1", "p3"], ["t2", "p4"], ["t2", "p5"] ]
-}
-	</textarea>
-	<br>
-	<textarea id="marking_text" rows="5" cols="60">
-{ "p1" : 1, "p2" : 1, "p3" : 2}
-	</textarea>
-	<br>
-	<button id="eval_button">Evaluate</button>
-      </div>
-    </span>
-  </body>
+    <head>
+        <meta charset="utf-8" />
+        <title>PetrisNet</title>
+<!--         <link rel="icon" type="image/png" href="images/layer-shape-curve.png" /> -->
+        <link href='css/style.css' rel='stylesheet' />
+        <link href='css/runner.css' rel='stylesheet' />
+        <link href='css/share.css' rel='stylesheet' />
+        <link href='css/font-awesome.min.css' rel='stylesheet' />
+    </head>
+    <body>
+
+        <div id="menu-btn">
+            <i class="fa fa-bars"></i>
+        </div>
+
+        <aside id="menu" class="slide-right">
+            <h1 class="logo">PetrisNet</h1>
+            <h1>Configuration</h1>
+            <ol class='toolbar'>
+                <li class='spec-area'><a href='#'><i class="fa fa-terminal"></i> Open Console</a></li>
+            </ol>
+            <h1>Algorithms</h1>
+            <ol class='toolbar'>
+                <li class='afn-afd'><a href='#'>Árvore de cobertura</a></li>
+                <li class='operation-trim'><a href='#'>Verificar estados bloqueantes</a></li>
+                <li class='operation-parallel'><a href='#'>Verificar estados não-limitados</a></li>
+                <li class='operation-parallel'><a href='#'>Verificar conservação na rede</a></li>
+                <li class='operation-parallel'><a href='#'>Alcançabilidade a partir de X0</a></li>
+            </ol>
+            <h1>Extras</h1>
+            <ol class='toolbar'>
+                <li class='credits-area'><a href='#'><i class="fa fa-group"></i> Credits</a></li>
+            </ol>
+        </aside>
+
+
+        <div class="petris-spec-area">
+            <i class="close spec-area fa fa-times"></i>
+            <textarea rows="5" cols="">
+s s0 -i
+s s1
+s s2 -f
+t s0 s1 a
+t s1 s2
+            </textarea>
+            <span class='spec-area-confirm'><a href='#' class="btn"><span></span>Confirm</a></span>
+        </div>
+
+        <div id='editor'>
+            <label for="insertError" style="position:absolute; height:10px; color:red; font:bold 14px Georgia, serif; width:100px; left:200px; top:200px; display: none" id="errorSymbol">Wrong symbol!</label>
+            <input type="text" size='8' style='position:absolute;height:20px;width:80px;left:0px;top:0px;display:none' id="inputSymbol" />
+            <input type="text" size='8' style='position:absolute;height:30px;width:30px;left:0px;top:0px;display:none' id="changeStateName" />
+            <canvas width='800' height='800'></canvas>
+        </div>
+
+        <script src='js/jquery-1.7.2.min.js'></script>
+        <script src='js/ui.js'></script>
+        <script src='js/hidpi-canvas.min.js'></script>
+        <script src='js/raphael-min.js'></script>
+        <script src='js/petrivis.js'></script>
+        <script src='js/main.js'></script>
+        <script type="text/javascript">
+            (function($){
+                $(document).ready(function(){
+                    $("#menu-btn").on('click', function(e){
+                        e.preventDefault();
+                        var $this = $(this);
+                        if(!$this.attr("open")){
+                            $this.attr("open", "open");
+                            $("#menu").addClass("open");
+                        }else{
+                            $this.attr("open", null);
+                            $("#menu").removeClass("open");
+                        }
+                    });
+                });
+            })(jQuery);
+        </script>
+    </body>
 </html>
+
+<!--     "places" : -->
+<!--     { "p1" : { "x" : 100, "y" : 100 }, -->
+<!--       "p2" : { "x" : 200, "y" : 100 }, -->
+<!--       "p3" : { "x" : 200, "y" : 200 }, -->
+<!--       "p4" : { "x" : 200, "y" : 300 }, -->
+<!--       "p5" : { "x" : 300, "y" : 300 }}, -->
+<!--     "transitions" : -->
+<!--     { "source1" : { "x" : 50, "y" : 100, "orientation" : 2}, -->
+<!--       "source2" : { "x" : 250, "y" : 100, "orientation" : 2 }, -->
+<!--       "t1" : { "x" : 150, "y" : 150, "orientation" : 1}, -->
+<!--       "t2" : { "x" : 250, "y" : 250, "orientation" : 1}, -->
+<!--       "sink" : {"x" : 250, "y" : 350, "orientation" : 1}}, -->
+<!--     "place_transition" : [ ["p1", "t1"], ["p2", "t1"], ["p3", "t2"], -->
+<!-- 			   ["p4", "sink"], ["p5", "sink"]], -->
+<!--     "transition_place" : [ ["source1", "p1"], ["source2", "p2"],  -->
+<!-- 			   ["t1", "p3"], ["t2", "p4"], ["t2", "p5"] ] -->
+<!-- 	<textarea id="marking_text" rows="5" cols="60"> -->
+<!-- { "p1" : 1, "p2" : 1, "p3" : 2} -->
+<!-- 	</textarea> -->
