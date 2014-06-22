@@ -6,7 +6,6 @@
 <!--         <link rel="icon" type="image/png" href="images/layer-shape-curve.png" /> -->
         <link href='css/style.css' rel='stylesheet' />
         <link href='css/runner.css' rel='stylesheet' />
-        <link href='css/share.css' rel='stylesheet' />
         <link href='css/font-awesome.min.css' rel='stylesheet' />
     </head>
     <body>
@@ -39,25 +38,28 @@
         <div class="petris-spec-area">
             <i class="close spec-area fa fa-times"></i>
             <textarea rows="5" cols="">
-s s0 -i
-s s1
-s s2 -f
-t s0 s1 a
-t s1 s2
+p p1 400 100 1
+p p2 500 100 1
+p p3 500 200 2
+p p4 500 300
+p p5 600 300
+t source1 350 100 2
+t source2 550 100 2
+t t1 450 150 1
+t t2 550 250 1
+t sink 550 350 1
+l_pt p1 t1;p2 t1;p3 t2;p4 sink;p5 sink
+l_tp source1 p1;source2 p2;t1 p3;t2 p4;t2 p5
             </textarea>
             <span class='spec-area-confirm'><a href='#' class="btn"><span></span>Confirm</a></span>
         </div>
 
         <div id='editor'>
-            <label for="insertError" style="position:absolute; height:10px; color:red; font:bold 14px Georgia, serif; width:100px; left:200px; top:200px; display: none" id="errorSymbol">Wrong symbol!</label>
-            <input type="text" size='8' style='position:absolute;height:20px;width:80px;left:0px;top:0px;display:none' id="inputSymbol" />
-            <input type="text" size='8' style='position:absolute;height:30px;width:30px;left:0px;top:0px;display:none' id="changeStateName" />
-            <canvas width='800' height='800'></canvas>
+            <div id="canvas_result"></div>
         </div>
 
         <script src='js/jquery-1.7.2.min.js'></script>
         <script src='js/ui.js'></script>
-        <script src='js/hidpi-canvas.min.js'></script>
         <script src='js/raphael-min.js'></script>
         <script src='js/petrivis.js'></script>
         <script src='js/main.js'></script>
@@ -80,23 +82,3 @@ t s1 s2
         </script>
     </body>
 </html>
-
-<!--     "places" : -->
-<!--     { "p1" : { "x" : 100, "y" : 100 }, -->
-<!--       "p2" : { "x" : 200, "y" : 100 }, -->
-<!--       "p3" : { "x" : 200, "y" : 200 }, -->
-<!--       "p4" : { "x" : 200, "y" : 300 }, -->
-<!--       "p5" : { "x" : 300, "y" : 300 }}, -->
-<!--     "transitions" : -->
-<!--     { "source1" : { "x" : 50, "y" : 100, "orientation" : 2}, -->
-<!--       "source2" : { "x" : 250, "y" : 100, "orientation" : 2 }, -->
-<!--       "t1" : { "x" : 150, "y" : 150, "orientation" : 1}, -->
-<!--       "t2" : { "x" : 250, "y" : 250, "orientation" : 1}, -->
-<!--       "sink" : {"x" : 250, "y" : 350, "orientation" : 1}}, -->
-<!--     "place_transition" : [ ["p1", "t1"], ["p2", "t1"], ["p3", "t2"], -->
-<!-- 			   ["p4", "sink"], ["p5", "sink"]], -->
-<!--     "transition_place" : [ ["source1", "p1"], ["source2", "p2"],  -->
-<!-- 			   ["t1", "p3"], ["t2", "p4"], ["t2", "p5"] ] -->
-<!-- 	<textarea id="marking_text" rows="5" cols="60"> -->
-<!-- { "p1" : 1, "p2" : 1, "p3" : 2} -->
-<!-- 	</textarea> -->

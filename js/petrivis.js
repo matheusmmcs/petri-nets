@@ -1,52 +1,39 @@
-function activate_transition(net, marking, tname) {
-    // Copy current marking
-    var post_marking = {}
-    for(var pname in marking) {
-	post_marking[pname] = marking[pname];
-    }
-
+function activate_transition(net, tname) {
     // Collect input places
     var input_places = [];
     for(var i = 0; i < net.place_transition.length; i++) {
-	if(net.place_transition[i][1] === tname) {
-	    input_places.push(net.place_transition[i][0]);
-	}
+		if(net.place_transition[i][1] === tname) {
+		    input_places.push(net.place_transition[i][0]);
+		}
     }
     
     // Check that input places are all marked
     // Note: If there are no input places, transition is always firable
     for(var i = 0; i < input_places.length; i++) {
-	if(marking[input_places[i]] < 1) {
-	    // Failed activation precondition, return marking unmodified
-	    return post_marking;
-	}	
+		if(net.places[input_places[i]].mark < 1) {
+		    return;
+		}	
     }
 
     // Collect output places
     var output_places = [];
     for(var i = 0; i < net.transition_place.length; i++) {
-	if(net.transition_place[i][0] === tname) {
-	    output_places.push(net.transition_place[i][1]);
-	}
+		if(net.transition_place[i][0] === tname) {
+		    output_places.push(net.transition_place[i][1]);
+		}
     }
 
     // Decrement input place token count
     for(var i = 0; i < input_places.length; i++) {
-	var pname = input_places[i];
-	post_marking[pname] = Math.max(post_marking[pname] - 1, 0);
+		var pname = input_places[i];
+		net.places[pname].mark = Math.max(net.places[pname].mark - 1, 0);
     }
 	
     // Increment output place token count
     for(var i = 0; i < output_places.length; i++) {
-	var pname = output_places[i];
-	if(pname in post_marking) {
-	    post_marking[pname] += 1;
-	} else {
-	    post_marking[pname] = 1;
-	}
+		var pname = output_places[i];
+		net.places[pname].mark++;
     }
-
-    return post_marking;
 }
 
 function PlaceElement(visualization, name, place) {
@@ -108,7 +95,8 @@ function TransitionElement(vis, name, transition) {
     this.rect.attr({fill: "white"});
     this.name_text.attr({'text-anchor' : 'start'});
     var activation_callback = function () {
-	vis.update_marking(activate_transition(vis.net, vis.marking, name));
+    	activate_transition(vis.net, name)
+    	vis.update_marking();
     };
     this.rect.click(activation_callback);
     this.name_text.click(activation_callback);
@@ -117,38 +105,36 @@ function TransitionElement(vis, name, transition) {
 TransitionElement.prototype = {
 };
 
-function PetriNetVisualization(paper, net, marking) {
+function PetriNetVisualization(paper, net) {
     this.net = net;
-    this.marking = marking;
     this.paper = paper;
     
     // Create place circles
     this.place_elements = {};
     for(var name in net.places) {
-	var p = net.places[name];
-	this.place_elements[name] = new PlaceElement(this, name, p);
+		var p = net.places[name];
+		this.place_elements[name] = new PlaceElement(this, name, p);
     }
     
     // Create transition boxes
     this.transition_elements = {};
     for(var name in net.transitions) {
-	var t = net.transitions[name];
-	//this.transition_elements[name] = this.create_transition(name, t);
-	this.transition_elements[name] = new TransitionElement(this, name, t);
+		var t = net.transitions[name];
+		this.transition_elements[name] = new TransitionElement(this, name, t);
     }
 
     // Create links
     this.link_elements = [];
     for (var i=0; i < net.place_transition.length; i++) {
-	var pt = net.place_transition[i];
-	this.link_elements.push(this.create_link(net.places[pt[0]], net.transitions[pt[1]], true));
+		var pt = net.place_transition[i];
+		this.link_elements.push(this.create_link(net.places[pt[0]], net.transitions[pt[1]], true));
     }
     for (var i=0; i < net.transition_place.length; i++) {
-	var tp = net.transition_place[i];
-	this.link_elements.push(this.create_link(net.places[tp[1]], net.transitions[tp[0]], false));
+		var tp = net.transition_place[i];
+		this.link_elements.push(this.create_link(net.places[tp[1]], net.transitions[tp[0]], false));
     }
 
-    this.update_marking(marking);
+    this.update_marking();
 }
 
 PetriNetVisualization.prototype = {
@@ -198,15 +184,10 @@ PetriNetVisualization.prototype = {
 	elems.arrow = this.paper.path(arrow_string);
 	return elems;
     },
-    "update_marking" : function(marking) {
-	this.marking = marking;
-	for(var pname in this.net.places) {
-	    if(pname in marking) {
-		this.place_elements[pname].set_n_tokens(marking[pname]);
-	    } else {
-		this.place_elements[pname].set_n_tokens(0);
-	    }
-	}
+    "update_marking" : function() {
+		for(var pname in this.net.places) {
+	    	this.place_elements[pname].set_n_tokens(this.net.places[pname].mark);
+		}
     }
 };
 
@@ -218,18 +199,18 @@ function line_cmd(x0, y0, x1, y1) {
     return cmd_str;
 }
 
-window.onload = function() {
-    var paper = new Raphael(document.getElementById('canvas_container'), 500, 500);
-    var network_text = document.getElementById("network_text");
-    var marking_text = document.getElementById("marking_text");
-    var eval_button = document.getElementById("eval_button");
-    eval_button.onclick = function () {
-	var network = JSON.parse(network_text.value);
-	var marking = JSON.parse(marking_text.value);
-	paper.clear();
-	var vis = new PetriNetVisualization(paper, network, marking);
-    };
-    var network = JSON.parse(network_text.value);
-    var marking = JSON.parse(marking_text.value);
-    var vis = new PetriNetVisualization(paper, network, marking);
-};
+//window.onload = function() {
+//    var paper = new Raphael(document.getElementById('canvas_container'), 500, 500);
+//    var network_text = document.getElementById("network_text");
+//    var marking_text = document.getElementById("marking_text");
+//    var eval_button = document.getElementById("eval_button");
+//    eval_button.onclick = function () {
+//	var network = JSON.parse(network_text.value);
+//	var marking = JSON.parse(marking_text.value);
+//	paper.clear();
+//	var vis = new PetriNetVisualization(paper, network, marking);
+//    };
+//    var network = JSON.parse(network_text.value);
+//    var marking = JSON.parse(marking_text.value);
+//    var vis = new PetriNetVisualization(paper, network, marking);
+//};
