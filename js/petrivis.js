@@ -139,25 +139,45 @@ function PetriNetVisualization(paper, net) {
 		this.transition_elements[name] = new TransitionElement(this, name, t);
     }
 
+    
     // Create links
     this.link_elements = [];
+    
+    var countInputTransitions = {};
+    for (var i=0; i < net.place_transition.length; i++) {
+    	var trans = net.place_transition[i][1];
+    	if (!countInputTransitions[trans]) {
+    		countInputTransitions[trans] = {index:0, count: 0};
+    	}
+    	
+    	countInputTransitions[trans].count++;
+    }
+    
     for (var i=0; i < net.place_transition.length; i++) {
 		var pt = net.place_transition[i];
-		this.link_elements.push(this.create_link(net.places[pt[0]], net.transitions[pt[1]], pt[2], true));
+		var trans = pt[1];
+		
+		this.link_elements.push(this.create_link(net.places[pt[0]], net.transitions[trans], pt[2], true, countInputTransitions[trans]));
+		countInputTransitions[trans].index++;
     }
     for (var i=0; i < net.transition_place.length; i++) {
 		var tp = net.transition_place[i];
-		this.link_elements.push(this.create_link(net.places[tp[1]], net.transitions[tp[0]], tp[2], false));
+		this.link_elements.push(this.create_link(net.places[tp[1]], net.transitions[tp[0]], tp[2], false, null));
     }
 
     this.update_marking();
 }
 
 PetriNetVisualization.prototype = {
+		// Arrow size
+	"as" : 8,
+		// Transition width
     "tw" : 50,
+    	// Transition height
     "th" : 20,
+    	// Place radius
     "pr" : 25,    
-    "create_link" : function(p, t, weight, forwardp) {
+    "create_link" : function(p, t, weight, forwardp, auxInputTransitions) {
 	var elems = {};
 	var a, b;
 
@@ -165,17 +185,25 @@ PetriNetVisualization.prototype = {
 	if(t.orientation === 1) {
 	    // Horizontal
 	    if(p.y > t.y) {
-		b = [t.x, t.y + this.th/2];
+	    	b = [t.x, t.y + this.th/2];
 	    } else {
-		b = [t.x, t.y - this.th/2];
+	    	b = [t.x, t.y - this.th/2];
+	    }
+	    
+	    if (auxInputTransitions) {
+	    	b[0] = b[0] + (auxInputTransitions.index+1) * (this.tw / (auxInputTransitions.count+1)) - this.tw/2;
 	    }
 	}
 	else {
 	    // Vertical
 	    if(p.x > t.x) {
-		b = [t.x + this.th/2, t.y];
+	    	b = [t.x + this.th/2, t.y];
 	    } else {
-		b = [t.x - this.th/2, t.y];
+	    	b = [t.x - this.th/2, t.y];
+	    }
+	    
+	    if (auxInputTransitions) {
+	    	b[1] = b[1] + (auxInputTransitions.index+1) * (this.tw / (auxInputTransitions.count+1)) - this.tw/2;
 	    }
 	}
 	
@@ -186,20 +214,37 @@ PetriNetVisualization.prototype = {
 	elems.line = this.paper.path(path_string);
 	elems.line.toBack();
 	
+	if (weight > 1) {
+		var newPoint = [(b[0] + a[0]) / 2, (b[1] + a[1]) / 2];
+		newPoint = [newPoint[0] + 10 * Math.cos(theta + Math.PI/2), newPoint[1] + 10 * Math.sin(theta + Math.PI/2)];
+	
+		elems.label = this.paper.text(newPoint[0], newPoint[1], weight+"");
+		elems.label.attr({'text-anchor' : 'middle'});
+	}
+	
 	// Add arrow
 	var mx = (a[0] + b[0]) / 2;
 	var my = (a[1] + b[1]) / 2;
 	var arrow_string = '';
 	if(forwardp) {
-	    arrow_string += line_cmd(mx, my, mx + 5 * Math.cos(theta + 3 * Math.PI/4), my + 5 * Math.sin(theta + 3 * Math.PI/4));
-	    arrow_string += line_cmd(mx, my, mx + 5 * Math.cos(theta - 3 * Math.PI/4), my + 5 * Math.sin(theta - 3 * Math.PI/4));
+		mx = b[0];
+		my = b[1];
+		
+		var point1 = [mx + this.as * Math.cos(theta + 3 * Math.PI/4), my + this.as * Math.sin(theta + 3 * Math.PI/4)];
+		var point2 = [mx + this.as * Math.cos(theta - 3 * Math.PI/4), my + this.as * Math.sin(theta - 3 * Math.PI/4)];
+		
+	    arrow_string = line_cmd2(point1[0], point1[1], mx, my, point2[0], point2[1]);
 	} else {
-	    arrow_string += line_cmd(mx, my, mx - 5 * Math.cos(theta + 3 * Math.PI/4), my - 5 * Math.sin(theta + 3 * Math.PI/4));
-	    arrow_string += line_cmd(mx, my, mx - 5 * Math.cos(theta - 3 * Math.PI/4), my - 5 * Math.sin(theta - 3 * Math.PI/4));
+		mx = a[0];
+		my = a[1];
+		
+		var point1 = [mx - this.as * Math.cos(theta + 3 * Math.PI/4), my - this.as * Math.sin(theta + 3 * Math.PI/4)];
+		var point2 = [mx - this.as * Math.cos(theta - 3 * Math.PI/4), my - this.as * Math.sin(theta - 3 * Math.PI/4)];
+		
+		arrow_string = line_cmd2(point1[0], point1[1], mx, my, point2[0], point2[1]);
 	}
 	elems.arrow = this.paper.path(arrow_string);
-	
-	console.log(weight);
+	elems.arrow.attr({fill: "black"});
 	
 	return elems;
     },
@@ -218,18 +263,8 @@ function line_cmd(x0, y0, x1, y1) {
     return cmd_str;
 }
 
-//window.onload = function() {
-//    var paper = new Raphael(document.getElementById('canvas_container'), 500, 500);
-//    var network_text = document.getElementById("network_text");
-//    var marking_text = document.getElementById("marking_text");
-//    var eval_button = document.getElementById("eval_button");
-//    eval_button.onclick = function () {
-//	var network = JSON.parse(network_text.value);
-//	var marking = JSON.parse(marking_text.value);
-//	paper.clear();
-//	var vis = new PetriNetVisualization(paper, network, marking);
-//    };
-//    var network = JSON.parse(network_text.value);
-//    var marking = JSON.parse(marking_text.value);
-//    var vis = new PetriNetVisualization(paper, network, marking);
-//};
+function line_cmd2(x0, y0, x1, y1, x2, y2) {
+    var cmd_str = line_cmd(x0, y0, x1, y1);
+    cmd_str += 'L' + x2.toFixed() + ',' + y2.toFixed() + "Z";
+    return cmd_str;
+}
