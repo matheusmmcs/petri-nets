@@ -64,7 +64,13 @@ function parseSpecification(specification) {
 					
 					if (currentContent.length) {
 						var currentLink = currentContent.split(/\s+/);
-						arrayToPush.push([currentLink[0], currentLink[1]]);
+						
+						var weight = 1;
+						if (currentLink.length >= 3){
+							weight = parseInt(currentLink[2]);
+						}
+						
+						arrayToPush.push([currentLink[0], currentLink[1], weight]);
 					}
 				}
 			}

@@ -1,38 +1,43 @@
 function activate_transition(net, tname) {
     // Collect input places
     var input_places = [];
+    var input_quantity = [];
+    
     for(var i = 0; i < net.place_transition.length; i++) {
 		if(net.place_transition[i][1] === tname) {
 		    input_places.push(net.place_transition[i][0]);
+		    input_quantity.push(net.place_transition[i][2]);
 		}
     }
     
     // Check that input places are all marked
     // Note: If there are no input places, transition is always firable
     for(var i = 0; i < input_places.length; i++) {
-		if(net.places[input_places[i]].mark < 1) {
+		if(net.places[input_places[i]].mark < input_quantity[i]) {
 		    return;
 		}	
     }
 
     // Collect output places
     var output_places = [];
+    var output_quantity = [];
     for(var i = 0; i < net.transition_place.length; i++) {
 		if(net.transition_place[i][0] === tname) {
 		    output_places.push(net.transition_place[i][1]);
+		    output_quantity.push(net.transition_place[i][2]);
 		}
     }
 
     // Decrement input place token count
-    for(var i = 0; i < input_places.length; i++) {
+    for (var i = 0; i < input_places.length; i++) {
 		var pname = input_places[i];
-		net.places[pname].mark = Math.max(net.places[pname].mark - 1, 0);
+		net.places[pname].mark = Math.max(net.places[pname].mark - input_quantity[i], 0);
     }
 	
     // Increment output place token count
     for(var i = 0; i < output_places.length; i++) {
 		var pname = output_places[i];
-		net.places[pname].mark++;
+		net.places[pname].mark += output_quantity[i];
     }
 }
 
@@ -138,11 +143,11 @@ function PetriNetVisualization(paper, net) {
     this.link_elements = [];
     for (var i=0; i < net.place_transition.length; i++) {
 		var pt = net.place_transition[i];
-		this.link_elements.push(this.create_link(net.places[pt[0]], net.transitions[pt[1]], true));
+		this.link_elements.push(this.create_link(net.places[pt[0]], net.transitions[pt[1]], pt[2], true));
     }
     for (var i=0; i < net.transition_place.length; i++) {
 		var tp = net.transition_place[i];
-		this.link_elements.push(this.create_link(net.places[tp[1]], net.transitions[tp[0]], false));
+		this.link_elements.push(this.create_link(net.places[tp[1]], net.transitions[tp[0]], tp[2], false));
     }
 
     this.update_marking();
@@ -152,7 +157,7 @@ PetriNetVisualization.prototype = {
     "tw" : 50,
     "th" : 20,
     "pr" : 25,    
-    "create_link" : function(p, t, forwardp) {
+    "create_link" : function(p, t, weight, forwardp) {
 	var elems = {};
 	var a, b;
 
@@ -193,6 +198,9 @@ PetriNetVisualization.prototype = {
 	    arrow_string += line_cmd(mx, my, mx - 5 * Math.cos(theta - 3 * Math.PI/4), my - 5 * Math.sin(theta - 3 * Math.PI/4));
 	}
 	elems.arrow = this.paper.path(arrow_string);
+	
+	console.log(weight);
+	
 	return elems;
     },
     "update_marking" : function() {
