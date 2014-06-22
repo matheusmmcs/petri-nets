@@ -84,13 +84,14 @@ function TransitionElement(vis, name, transition) {
     this.t = transition;
     var th = vis.th;
     var tw = vis.tw;
+    
     if(this.t.orientation === 1) {
-	this.rect = vis.paper.rect(this.t.x - tw/2, this.t.y - th/2, tw, th);
-	this.name_text = vis.paper.text(this.t.x - tw/2 + 5, this.t.y, name);
+		this.rect = vis.paper.rect(this.t.x - tw/2, this.t.y - th/2, tw, th);
+		this.name_text = vis.paper.text(this.t.x - tw/2 + 5, this.t.y, name);
     } else {
-	this.rect = vis.paper.rect(this.t.x - th/2, this.t.y - tw/2, th, tw);
-	this.name_text = vis.paper.text(this.t.x, this.t.y - tw/2 + 5, name);
-	this.name_text.transform('r90');
+		this.rect = vis.paper.rect(this.t.x - th/2, this.t.y - tw/2, th, tw);
+		this.name_text = vis.paper.text(this.t.x, this.t.y - tw/2 + 5, name);
+		this.name_text.transform('r90');
     }
     this.rect.attr({fill: "white"});
     this.name_text.attr({'text-anchor' : 'start'});
@@ -98,8 +99,18 @@ function TransitionElement(vis, name, transition) {
     	activate_transition(vis.net, name)
     	vis.update_marking();
     };
-    this.rect.click(activation_callback);
-    this.name_text.click(activation_callback);
+    
+    var trans = vis.paper.set();
+    trans.push(this.rect);
+    trans.push(this.name_text);
+    
+    trans.click(activation_callback);
+    trans.mouseover(function(){
+    	trans.attr({"cursor": "pointer"});
+    });
+    trans.mouseout(function(){
+    	trans.attr({"cursor": "default"});
+    });
 }
 
 TransitionElement.prototype = {
