@@ -1,3 +1,5 @@
+var ARROW_SIZE = 8;
+
 function activate_transition(net, tname) {
     // Collect input places
     var input_places = [];
@@ -169,8 +171,6 @@ function PetriNetVisualization(paper, net) {
 }
 
 PetriNetVisualization.prototype = {
-		// Arrow size
-	"as" : 8,
 		// Transition width
     "tw" : 50,
     	// Transition height
@@ -178,7 +178,6 @@ PetriNetVisualization.prototype = {
     	// Place radius
     "pr" : 25,    
     "create_link" : function(p, t, weight, forwardp, auxInputTransitions) {
-	var elems = {};
 	var a, b;
 
 	// Pick a connection point on the transition box
@@ -209,44 +208,13 @@ PetriNetVisualization.prototype = {
 	
 	var theta = Math.atan2(b[1] - p.y, b[0] - p.x);
 	a = [p.x + this.pr * Math.cos(theta), p.y + this.pr * Math.sin(theta)];
-	var path_string;
-	path_string = line_cmd(a[0], a[1], b[0], b[1]);
-	elems.line = this.paper.path(path_string);
-	elems.line.toBack();
-	
+
+	var label = "";
 	if (weight > 1) {
-		var newPoint = [(b[0] + a[0]) / 2, (b[1] + a[1]) / 2];
-		newPoint = [newPoint[0] + 10 * Math.cos(theta + Math.PI/2), newPoint[1] + 10 * Math.sin(theta + Math.PI/2)];
-	
-		elems.label = this.paper.text(newPoint[0], newPoint[1], weight+"");
-		elems.label.attr({'text-anchor' : 'middle'});
+		label += weight;
 	}
 	
-	// Add arrow
-	var mx = (a[0] + b[0]) / 2;
-	var my = (a[1] + b[1]) / 2;
-	var arrow_string = '';
-	if(forwardp) {
-		mx = b[0];
-		my = b[1];
-		
-		var point1 = [mx + this.as * Math.cos(theta + 3 * Math.PI/4), my + this.as * Math.sin(theta + 3 * Math.PI/4)];
-		var point2 = [mx + this.as * Math.cos(theta - 3 * Math.PI/4), my + this.as * Math.sin(theta - 3 * Math.PI/4)];
-		
-	    arrow_string = line_cmd2(point1[0], point1[1], mx, my, point2[0], point2[1]);
-	} else {
-		mx = a[0];
-		my = a[1];
-		
-		var point1 = [mx - this.as * Math.cos(theta + 3 * Math.PI/4), my - this.as * Math.sin(theta + 3 * Math.PI/4)];
-		var point2 = [mx - this.as * Math.cos(theta - 3 * Math.PI/4), my - this.as * Math.sin(theta - 3 * Math.PI/4)];
-		
-		arrow_string = line_cmd2(point1[0], point1[1], mx, my, point2[0], point2[1]);
-	}
-	elems.arrow = this.paper.path(arrow_string);
-	elems.arrow.attr({fill: "black"});
-	
-	return elems;
+	return drawArrow(a, b, !forwardp, label);
     },
     "update_marking" : function() {
 		for(var pname in this.net.places) {
@@ -255,7 +223,51 @@ PetriNetVisualization.prototype = {
     }
 };
 
+function drawArrow(pointA, pointB, inverse, label) {
+	var elems = {};
+	
+	var theta = Math.atan2(pointB[1] - pointA[1], pointB[0] - pointA[0]);
+	var path_string;
+	path_string = line_cmd(pointA[0], pointA[1], pointB[0], pointB[1]);
+	elems.line = this.paper.path(path_string);
+	elems.line.toBack();
+	
+	if (label) {
+		var newPoint = [(pointB[0] + pointA[0]) / 2, (pointB[1] + pointA[1]) / 2];
+		newPoint = [newPoint[0] + 10 * Math.cos(theta + Math.PI/2), newPoint[1] + 10 * Math.sin(theta + Math.PI/2)];
+	
+		elems.label = this.paper.text(newPoint[0], newPoint[1], label);
+		elems.label.attr({'text-anchor' : 'middle'});
+	}
 
+	if (inverse !== null) {
+		// Add arrow
+		var mx = null;
+		var my = null;
+		var arrow_string = '';
+		if(inverse) {
+			mx = pointA[0];
+			my = pointA[1];
+			
+			var point1 = [mx - ARROW_SIZE * Math.cos(theta + 3 * Math.PI/4), my - ARROW_SIZE * Math.sin(theta + 3 * Math.PI/4)];
+			var point2 = [mx - ARROW_SIZE * Math.cos(theta - 3 * Math.PI/4), my - ARROW_SIZE * Math.sin(theta - 3 * Math.PI/4)];
+			
+			arrow_string = line_cmd2(point1[0], point1[1], mx, my, point2[0], point2[1]);
+		} else {
+			mx = pointB[0];
+			my = pointB[1];
+			
+			var point1 = [mx + ARROW_SIZE * Math.cos(theta + 3 * Math.PI/4), my + ARROW_SIZE * Math.sin(theta + 3 * Math.PI/4)];
+			var point2 = [mx + ARROW_SIZE * Math.cos(theta - 3 * Math.PI/4), my + ARROW_SIZE * Math.sin(theta - 3 * Math.PI/4)];
+			
+			arrow_string = line_cmd2(point1[0], point1[1], mx, my, point2[0], point2[1]);
+		}
+		elems.arrow = this.paper.path(arrow_string);
+	elems.arrow.attr({fill: "black"});
+	}
+	
+	return elems;
+}
 
 function line_cmd(x0, y0, x1, y1) {
     var cmd_str = 'M' + x0.toFixed() + ',' + y0.toFixed();
