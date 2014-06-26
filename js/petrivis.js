@@ -230,14 +230,24 @@ function drawArrow(pointA, pointB, inverse, label) {
 	var path_string;
 	path_string = line_cmd(pointA[0], pointA[1], pointB[0], pointB[1]);
 	elems.line = this.paper.path(path_string);
+	elems.line.attr({'stroke': 'rgba(0,0,0,0.5)'});
 	elems.line.toBack();
 	
 	if (label) {
+		var loc = "end";
+		
 		var newPoint = [(pointB[0] + pointA[0]) / 2, (pointB[1] + pointA[1]) / 2];
-		newPoint = [newPoint[0] + 10 * Math.cos(theta + Math.PI/2), newPoint[1] + 10 * Math.sin(theta + Math.PI/2)];
+		var newTheta = theta;
+		if (newTheta <= Math.PI/2) {
+			newTheta += Math.PI;
+			
+			loc = "start";
+		}
+		
+		newPoint = [newPoint[0] + 10 * Math.cos(newTheta + Math.PI/2), newPoint[1] + 10 * Math.sin(newTheta + Math.PI/2)];
 	
 		elems.label = this.paper.text(newPoint[0], newPoint[1], label);
-		elems.label.attr({'text-anchor' : 'middle'});
+		elems.label.attr({'text-anchor' : loc, 'font-size': 12, 'font-weight': 'bold'});
 	}
 
 	if (inverse !== null) {
@@ -263,7 +273,7 @@ function drawArrow(pointA, pointB, inverse, label) {
 			arrow_string = line_cmd2(point1[0], point1[1], mx, my, point2[0], point2[1]);
 		}
 		elems.arrow = this.paper.path(arrow_string);
-	elems.arrow.attr({fill: "black"});
+		elems.arrow.attr({fill: "black"});
 	}
 	
 	return elems;

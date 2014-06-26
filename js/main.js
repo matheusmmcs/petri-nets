@@ -174,10 +174,26 @@ function getCoverageTree() {
 		return {status: "normal"};
 	};
 	
+	function getSumTokens(marking) {
+		var sum = 0;
+		
+		for (var p in marking) {
+			var tokens = marking[p];
+			if (tokens == 'w') {
+				return -1;
+			} else {
+				sum += tokens;
+			}
+		}
+		
+		return sum;
+	}
+	
 	function addNodes(parent) {
 		if (parent) {
 			var parentMarking = parent.marking;
 			
+			var anyTransActive = false;
 			for (var trans in transitionEffets) {
 				var input = transitionEffets[trans].input;
 				var output = transitionEffets[trans].output;
@@ -190,6 +206,8 @@ function getCoverageTree() {
 				}
 				
 				if (transActive) {
+					anyTransActive = true;
+					
 					var newNode = {marking: $.extend({}, parentMarking), parent: parent, parentTrans: trans, children: []};
 					parent.children.push(newNode);
 					
@@ -204,26 +222,38 @@ function getCoverageTree() {
 						}
 					}
 					
+					var sumTokens = getSumTokens(newNode.marking);
+					if (sumTokens < 0 || sumTokens != result.root._conservativeSum) {
+						result.root.conservative = false;
+					}
+					
 					var checkResult = checkNode(newNode);
 					if (checkResult.status == "cover") {
 						for (var place in newNode.marking) {
 							var nodeCheckedMarking = checkResult.node.marking[place];
 							if (nodeCheckedMarking == "w" || newNode.marking[place] > nodeCheckedMarking) {
+								result.root.limited = false;
+								result.root.conservative = false;
 								newNode.marking[place] = "w";
 							}
 						}
 						
 						addNodes(newNode);
 					} else if (checkResult.status == "repeat") {
-						parent.children.pop();
+						newNode.repeated = true;
 					} else {
 						addNodes(newNode);
 					}
 				}
 			}
+			
+			if (!anyTransActive) {
+				parent.blocking = true;
+			}
 		} else {
-			result.root = {marking: null, parent: null, parentTrans: null, children: []};
+			result.root = {marking: null, parent: null, parentTrans: null, children: [], limited: true, conservative: true};
 			result.root.marking = $.extend({}, initialMarking);
+			result.root._conservativeSum = getSumTokens(result.root.marking);  
 			
 			addNodes(result.root);
 		}
@@ -234,6 +264,91 @@ function getCoverageTree() {
 	return result;
 }
 
+function treePrepareRoot(node, level, parentNode, leftNode, rightLimits) {
+    if (level == undefined) level = 0;
+    if (parentNode == undefined) parentNode = null;
+    if (leftNode == undefined) leftNode = null;
+    if (rightLimits == undefined) rightLimits = new Array();
+
+    node.Level = level;
+    node.ParentNode = parentNode;
+    node.LeftNode = leftNode;
+
+    if (node.children && node.children.length > 0) { // Has children and is expanded
+        for (var i = 0; i < node.children.length; i++) {
+            var left = null;
+            if (i == 0 && rightLimits[level] != undefined) left = rightLimits[level];
+            if (i > 0) left = node.children[i - 1];
+            if (i == (node.children.length-1)) rightLimits[level] = node.children[i];
+            treePrepareRoot(node.children[i], level + 1, node, left, rightLimits);
+        }
+    }
+}
+
+function treeMoveRightNode(nodes, distance) {
+    for (var i = 0; i < nodes.length; i++) {
+        nodes[i].Left += distance;
+        if (nodes[i].children) {
+        	treeMoveRightNode(nodes[i].children, distance);
+        }
+    }
+}
+
+function treeAssignPosition(node) {
+
+    var nodeHeight = 30;
+    var nodeWidth = 100;
+    var nodeMarginLeft = 30;
+    var nodeMarginTop = 50;
+
+    var nodeLeft = 0; // defaultValue 
+
+    // Before Layout this Node, Layout its children
+    if (node.children && node.children.length>0) {
+        for (var i = 0; i < node.children.length; i++) {
+        	treeAssignPosition(node.children[i]);
+        }
+    }
+
+    if (node.children && node.children.length > 0) { // If Has Children and Is Expanded
+
+        // My left is in the center of my children
+        var childrenWidth = (node.children[node.children.length-1].Left + node.children[node.children.length-1].Width) - node.children[0].Left;
+        nodeLeft = (node.children[0].Left + (childrenWidth / 2)) - (nodeWidth / 2);
+
+        // Is my left over my left node?
+        // Move it to the right
+        if(node.LeftNode && ((node.LeftNode.Left+node.LeftNode.Width+nodeMarginLeft)>nodeLeft)) {
+            var newLeft = node.LeftNode.Left + node.LeftNode.Width + nodeMarginLeft;
+            var diff = newLeft - nodeLeft;
+            /// Move also my children
+            treeMoveRightNode(node.children, diff);
+            nodeLeft = newLeft;
+        }
+    } else {
+        // My left is next to my left sibling
+        if (node.LeftNode) 
+            nodeLeft = node.LeftNode.Left + node.LeftNode.Width + nodeMarginLeft;
+    }
+
+    node.Left = nodeLeft;
+
+    // The top depends only on the level
+    node.Top = (nodeMarginTop * (node.Level + 1)) + (nodeHeight * (node.Level + 1));
+    // Size is constant
+    node.Height = nodeHeight;
+    node.Width = nodeWidth;
+}
+
+function convertMarkingToTxt(marking) {
+	var values = [];
+	for (var place in marking) {
+		values.push(marking[place]);
+	}
+	
+	return "["+values.join()+"]";
+}
+
 function drawTree(tree) {
 	paper.clear();
 	
@@ -242,14 +357,11 @@ function drawTree(tree) {
 	var posX = window.innerWidth/2;
 	var posY = 20;
 	
-	function convertMarkingToTxt(marking) {
-		var values = [];
-		for (var place in marking) {
-			values.push(marking[place]);
-		}
-		
-		return "["+values.join()+"]";
-	}
+	treePrepareRoot(root);
+	treeAssignPosition(root);
+	
+	var diffPosX = root.Left - posX;
+	var diffPosY = root.Top - posY;
 	
 	var sampleText = paper.text(posX, posY, convertMarkingToTxt(root.marking)).attr({'text-anchor' : 'middle'});
 	var sizeText = sampleText.getBBox();
@@ -257,24 +369,43 @@ function drawTree(tree) {
 	
 	var widthRect = sizeText.width + 10;
 	var heightRect = sizeText.height + 10;
-//	var childWidth = 1.5 * widthRect;
-//	var heightGap = 2 * heightRect;
-	var childWidth = 3.5 * widthRect;
-	var heightGap = 4 * heightRect;
 	
-	function drawNode(node, posX, posY) {
-		var rect = paper.rect(posX - widthRect/2, posY - heightRect/2, widthRect, heightRect).attr({fill: "white"});
+	function drawNode(node) {
+		var posX = node.Left - diffPosX;
+		var posY = node.Top - diffPosY;
+		
+		var rect = paper.rect(posX - widthRect/2, posY - heightRect/2, widthRect, heightRect);
+		if (node.blocking) {
+			rect.attr({fill: "#FF8585"})
+		} else if (node.repeated) {
+			rect.attr({fill: "#6699FF"})
+		} else {
+			rect.attr({fill: "white"})
+		}
+		
 		paper.text(posX, posY, convertMarkingToTxt(node.marking)).attr({'text-anchor' : 'middle'});
 		
-		var baseChildrenWidth = node.children.length * (childWidth) - childWidth;
 		for (var index = 0; index < node.children.length; index++) {
-			var newPosX = posX - baseChildrenWidth/2 + index * childWidth;
-			var newPosY = posY + heightGap;
+			var childNode = node.children[index];
+			var newPosX = childNode.Left - diffPosX;
+			var newPosY = childNode.Top - diffPosY;
 			
-			drawNode(node.children[index], newPosX, newPosY);
-			drawArrow([posX, posY], [newPosX, newPosY], null, node.children[index].parentTrans);
+			drawNode(childNode);
+			drawArrow([posX, posY], [newPosX, newPosY], null, childNode.parentTrans);
 		}
 	}
 	
-	drawNode(root, posX, posY);
+	drawNode(root);
+	
+	var posInfoX = root.Left - diffPosX + widthRect/2 + 20;
+	var posInfoY = root.Top - diffPosY;
+	
+	var infoText = null;
+	if (root.limited) {
+		infoText = paper.text(posInfoX, posInfoY, "RdP Limitada | " + ((root.conservative) ? "" : "Não ") +"Conservativa");
+	} else {
+		infoText = paper.text(posInfoX, posInfoY, "RdP Não-Limitada | Não conservativa");
+	}
+	
+	infoText.attr({'text-anchor': 'start', 'font-size': 14, 'font-weight': 'bold'});
 }
