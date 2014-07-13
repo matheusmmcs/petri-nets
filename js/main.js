@@ -19,6 +19,8 @@ $(document).ready(function() {
 	specConfirm.click(function() {
 		var valueSpec = specArea.val();
 		parseSpecification(valueSpec);
+		
+		$("#div-legend").hide();
 	});
 	
 	// ### Credits ###
@@ -31,9 +33,77 @@ $(document).ready(function() {
 		}
 	});
 	
-	$(".operation-coverage-tree").click(function() {
+	$(".operation-coverage-tree, .operation-state-block, .operation-state-no-limited, .operation-consevation").click(function() {
 		var coverageTree = getCoverageTree();
-		drawTree(coverageTree);
+		if (coverageTree.root) {
+			$("#div-legend").show();
+			
+			drawTree(coverageTree);
+		}
+	});
+	
+	$(".operation-reachable").click(function() {
+		var desiredState = window.prompt("Qual estado a ser alcançado? Ex: '1, 0, 0, 1' (sem as aspas)");
+		var result = checkValidInputState(desiredState);
+		if (result[0]) {
+			var coverageTree = getCoverageTree();
+			var markings = result[1];
+			
+			function checkEqualsNode(node) {
+				for (var indexC = 0; indexC < node.children.length; indexC++) {
+					var child = checkEqualsNode(node.children[indexC]);
+					if (child) {
+						return child;
+					}
+				}
+				
+				var index = 0;
+				for (var p in node.marking) {
+					if (node.marking[p] == "w") {
+						var parentNode = node.parent;
+						while (parentNode != null) {
+							if (parentNode.marking[p] != "w") {
+								if (parentNode.marking[p] > markings[index]) {
+									return false;
+								}
+								break;
+							}
+							
+							parentNode = parentNode.parent;
+						}
+					} else {
+						if (node.marking[p] != markings[index]) {
+							return false;
+						}
+					}
+					index++;
+				}
+				
+				return node;
+			}
+			
+			var node = checkEqualsNode(coverageTree.root);
+			if (node) {
+				console.log(node);
+				
+				var transitions = [];
+				
+				while (true) {
+					if (node.parent != null) {
+						transitions.push(node.parentTrans);
+						node = node.parent;
+					} else {
+						break;
+					}
+				}
+				
+				window.alert("O estado é alcançável seguindo as seguintes transições: " + transitions.reverse().join(" -> "));
+			} else {
+				window.alert("O estado não é alcançavel");
+			}
+		} else {
+			window.alert(result[1]);
+		}
 	});
 });
 
@@ -408,4 +478,29 @@ function drawTree(tree) {
 	}
 	
 	infoText.attr({'text-anchor': 'start', 'font-size': 14, 'font-weight': 'bold'});
+}
+
+function checkValidInputState(state){
+	var result = [];
+	
+	state = state.trim();
+	var stateSplitted = state.split(",");
+	
+	var numKeys = Object.keys(petriVis.net.places).length;
+	if (numKeys != stateSplitted.length) {
+		return [false, "Existem " + numKeys + " estados, mas você entrou com " + stateSplitted.length];
+	}
+	
+	for (var index = 0; index < stateSplitted.length; index++) {
+		var tokens = parseInt(stateSplitted[index]);
+		if (isNaN(tokens)) {
+			return [false, "Apenas inteiros são aceitos como quantidade de tokens"];
+		} else if (tokens < 0) {
+			return [false, "Apenas inteiros não-negativos"];
+		}
+		
+		result.push(tokens);
+	}
+	
+	return [true, result];
 }
