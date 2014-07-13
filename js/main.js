@@ -44,65 +44,67 @@ $(document).ready(function() {
 	
 	$(".operation-reachable").click(function() {
 		var desiredState = window.prompt("Qual estado a ser alcançado? Ex: '1, 0, 0, 1' (sem as aspas)");
-		var result = checkValidInputState(desiredState);
-		if (result[0]) {
-			var coverageTree = getCoverageTree();
-			var markings = result[1];
-			
-			function checkEqualsNode(node) {
-				for (var indexC = 0; indexC < node.children.length; indexC++) {
-					var child = checkEqualsNode(node.children[indexC]);
-					if (child) {
-						return child;
-					}
-				}
+		if (desiredState.trim()) {
+			var result = checkValidInputState(desiredState);
+			if (result[0]) {
+				var coverageTree = getCoverageTree();
+				var markings = result[1];
 				
-				var index = 0;
-				for (var p in node.marking) {
-					if (node.marking[p] == "w") {
-						var parentNode = node.parent;
-						while (parentNode != null) {
-							if (parentNode.marking[p] != "w") {
-								if (parentNode.marking[p] > markings[index]) {
-									return false;
+				function checkEqualsNode(node) {
+					for (var indexC = 0; indexC < node.children.length; indexC++) {
+						var child = checkEqualsNode(node.children[indexC]);
+						if (child) {
+							return child;
+						}
+					}
+					
+					var index = 0;
+					for (var p in node.marking) {
+						if (node.marking[p] == "w") {
+							var parentNode = node.parent;
+							while (parentNode != null) {
+								if (parentNode.marking[p] != "w") {
+									if (parentNode.marking[p] > markings[index]) {
+										return false;
+									}
+									break;
 								}
-								break;
+								
+								parentNode = parentNode.parent;
 							}
-							
-							parentNode = parentNode.parent;
+						} else {
+							if (node.marking[p] != markings[index]) {
+								return false;
+							}
 						}
-					} else {
-						if (node.marking[p] != markings[index]) {
-							return false;
-						}
+						index++;
 					}
-					index++;
+					
+					return node;
 				}
 				
-				return node;
-			}
-			
-			var node = checkEqualsNode(coverageTree.root);
-			if (node) {
-				console.log(node);
-				
-				var transitions = [];
-				
-				while (true) {
-					if (node.parent != null) {
-						transitions.push(node.parentTrans);
-						node = node.parent;
-					} else {
-						break;
+				var node = checkEqualsNode(coverageTree.root);
+				if (node) {
+					console.log(node);
+					
+					var transitions = [];
+					
+					while (true) {
+						if (node.parent != null) {
+							transitions.push(node.parentTrans);
+							node = node.parent;
+						} else {
+							break;
+						}
 					}
+					
+					window.alert("O estado é alcançável seguindo as seguintes transições: " + transitions.reverse().join(" -> "));
+				} else {
+					window.alert("O estado não é alcançavel");
 				}
-				
-				window.alert("O estado é alcançável seguindo as seguintes transições: " + transitions.reverse().join(" -> "));
 			} else {
-				window.alert("O estado não é alcançavel");
+				window.alert(result[1]);
 			}
-		} else {
-			window.alert(result[1]);
 		}
 	});
 });
